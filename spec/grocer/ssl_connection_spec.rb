@@ -14,11 +14,13 @@ describe Grocer::SSLConnection do
 
   let(:mock_socket) { stub_everything }
   let(:mock_ssl)    { stub_everything }
+  let(:certificate_option) { '/path/to/cert.pem' }
+  let(:certificate_passphrase) { 'abc123' }
 
   let(:connection_options) {
     {
-      certificate: '/path/to/cert.pem',
-      passphrase:  'abc123',
+      certificate: certificate_option,
+      passphrase:  certificate_passphrase,
       gateway:     'gateway.push.example.com',
       port:         1234
     }
@@ -36,6 +38,37 @@ describe Grocer::SSLConnection do
 
     it 'is initialized with a certificate IO' do
       expect(subject.certificate).to eq(File.read(connection_options[:certificate]))
+    end
+  end
+
+  describe 'configuration with p12 certificate' do
+    let(:p12){ File.read(File.dirname(__FILE__) + '/../fixtures/example.p12') }
+    let(:certificate_option){ { 'p12' => p12} }
+    let(:certificate_passphrase){ "grocer" }
+
+    subject {
+      described_class.new(connection_options)
+    }
+
+    it 'is initialized with a PKCS#12 certificate' do
+      key,cert = subject.key_and_cert_from_options
+      expect(cert.to_s).to eq(OpenSSL::PKCS12.new(p12, certificate_passphrase).certificate.to_s)
+      expect(key.to_s).to eq(OpenSSL::PKCS12.new(p12, certificate_passphrase).key.to_s)
+    end
+  end
+
+  describe 'configuration with p12 certificate' do
+    let(:pem){ File.read(File.dirname(__FILE__) + '/../fixtures/example.pem') }
+    let(:certificate_option){ { pem: pem} }
+    let(:certificate_passphrase){ "grocer" }
+
+    subject {
+      described_class.new(connection_options)
+    }
+
+    it 'is initialized with a PEM certificate' do
+      key, cert = subject.key_and_cert_from_options
+      expect(cert.to_s).to eq(OpenSSL::X509::Certificate.new(pem).to_s)
     end
   end
 

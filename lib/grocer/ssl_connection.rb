@@ -20,11 +20,22 @@ module Grocer
       !@ssl.nil?
     end
 
-    def connect
-      context = OpenSSL::SSL::SSLContext.new
+    def key_and_cert_from_options
+      case certificate
+      when Hash
+        if certificate['p12'] || certificate[:p12] || certificate['p12_file'] || certificate[:p12_file]
+          pkcs12_data = certificate['p12'] || certificate[:p12] ||
+            File.read(certificate['p12_file'] || certificate[:p12_file])
+          pkcs12 = OpenSSL::PKCS12.new(pkcs12_data, passphrase)
 
-      if certificate
-
+          [pkcs12.key, pkcs12.certificate]
+        elsif certificate['pem'] || certificate[:pem] || certificate['pem_file'] || certificate[:pem_file]
+          pem_data = certificate['pem'] || certificate[:pem] ||
+            File.read(certificate['pem_file'] || certificate[:pem_file])
+            
+          [OpenSSL::PKey::RSA.new(pem_data, passphrase), OpenSSL::X509::Certificate.new(pem_data)]
+        end
+      else
         if certificate.respond_to?(:read)
           cert_data = certificate.read
           certificate.rewind if certificate.respond_to?(:rewind)
@@ -32,9 +43,13 @@ module Grocer
           cert_data = File.read(certificate)
         end
 
-        context.key  = OpenSSL::PKey::RSA.new(cert_data, passphrase)
-        context.cert = OpenSSL::X509::Certificate.new(cert_data)
+        [OpenSSL::PKey::RSA.new(cert_data, passphrase), OpenSSL::X509::Certificate.new(cert_data)]
       end
+    end
+
+    def connect
+      context = OpenSSL::SSL::SSLContext.new
+      context.key, context.cert = key_and_cert_from_options
 
       @sock            = TCPSocket.new(gateway, port)
       @sock.setsockopt   Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true

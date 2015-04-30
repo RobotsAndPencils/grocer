@@ -49,11 +49,21 @@ pusher = Grocer.pusher(
 )
 ```
 
+You can also pass in the following as a certificate:
+```ruby
+  certificate: { p12: p12 }
+  certificate: { p12_file: "/path/to/cert.p12" }
+  certificate: { pem: pem }
+  certificate: { pem_file: "/path/to/cert.pem" }
+```
+
+
 #### Notes
 
-* `certificate`: If you don't have the certificate stored in a file, you
-  can pass any object that responds to `read`.
-  Example: `certificate: StringIO.new(pem_string)`
+* `certificate`: the old file/string io option is still supported but now certificate
+   will accept a hash that contains either a certificate (PKCS12 or PEM). PKCS12 is the
+   format you get when you export a certificate from Keychain.app. PEM is a text based
+   format that is often used in emails. Both are now supported.
 * `gateway`: Defaults to different values depending on the `RAILS_ENV` or
   `RACK_ENV` environment variables. If set to `production`, defaults to
   `gateway.push.apple.com`, if set to `test`, defaults to `localhost` (see
@@ -305,4 +315,3 @@ Requests](https://github.com/grocer/grocer/pulls) are the primary venues for
 communicating issues and discussing possible features. Several of us also
 regularly hang out in the `#grocer` channel on Freenode; feel free to pop in
 and ask questions there as well. Thanks! :heart:
-
